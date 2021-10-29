@@ -1,0 +1,97 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-cicd
+  namespace: cicd
+secrets:
+  - name: quay-io-credentials
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name:  tekton-cicd
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - create
+      - list
+      - patch
+      - watch
+      - delete
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+    verbs:
+      - get
+      - create
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+      - create
+      - update
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - patch
+      - create
+      - delete
+  - apiGroups:
+      - "networking.istio.io"
+    resources:
+      - gateways
+    verbs:
+      - get
+      - patch
+      - list
+      - create
+      - delete
+  - apiGroups:
+      - "networking.istio.io"
+    resources:
+      - virtualservices
+    verbs:
+      - get
+      - patch
+      - list
+      - create
+      - delete
+  - apiGroups:
+      - "networking.istio.io"
+    resources:
+      - sidecar
+    verbs:
+      - get
+      - patch
+      - list
+      - create
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-cicd
+subjects:
+  - kind: ServiceAccount
+    name: tekton-cicd
+    namespace: cicd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-cicd

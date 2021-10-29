@@ -1,0 +1,56 @@
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: github-trigger
+  namespace: cicd
+spec:
+  serviceAccountName: tekton-trigger
+  triggers:
+    - name: branch-push
+      bindings:
+        - ref: branch-push
+      template:
+        name: branch-push
+      interceptors:
+        - github:
+            eventTypes:
+            - push
+        - cel:
+            filter: 'body.ref.matches("refs/heads/(feature|hotfix|patch|bugfix)/[a-z\\-0-9A-Z]{1,20}")'
+        - cel:
+            filter: "body.created == false"
+        - cel:
+            filter: "body.deleted == false"
+        - cel:
+            overlays:
+            - key: branch_name
+              expression: "body.ref.split('refs/heads/')[1]"
+            - key: tag_name
+              expression: "body.ref.split('/')[3]"
+    - name: pr-merged
+      bindings:
+        - ref: pr-merged
+      template:
+        name: pr-merged
+      interceptors:
+        - github:
+            eventTypes:
+            - push
+        - cel:
+            filter: "body.ref.contains('refs/heads/main')"
+    - name: tag-released
+      bindings:
+        - ref: tag-released
+      template:
+        name: tag-released
+      interceptors:
+        - github:
+            eventTypes:
+            - push
+        - cel:
+            filter: "body.ref.contains('refs/tags/')"
+        - cel:
+            overlays:
+            - key: tag_name
+              expression: "body.ref.split('/')[2]"

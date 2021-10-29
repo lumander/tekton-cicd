@@ -1,0 +1,79 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: branch-push
+  namespace: cicd
+spec:
+  params:
+    - name: repository_url
+      type: string
+      description: url of the repository ( e.g. https://github.com/owner/application )
+    - name: repository_name
+      type: string
+      description: full name of the repository ( e.g. owner/application )
+    - name: application_name
+      type: string
+      description: name of the repository ( e.g. application )
+    - name: branch_name
+      type: string
+      description: branch to be cloned
+    - name: tag_name
+      type: string
+      description: tag to be released on image registry
+  workspaces:
+  - name: pipeline-shared-data
+  tasks:
+  - name: clone-repository
+    taskRef:
+      name: git-clone
+      kind: ClusterTask
+    workspaces:
+    - name: output
+      workspace: pipeline-shared-data
+    params:
+      - name: url
+        value: "$(params.repository_url)"
+      - name: revision
+        value: "$(params.branch_name)"
+  - name: tests
+    taskRef:
+      name: npm
+    params:
+      - name: ARGS
+        value:
+          - install-ci-test
+    workspaces:
+    - name: source
+      workspace: pipeline-shared-data
+    runAfter:
+      - clone-repository
+  - name: build-and-push
+    taskRef:
+      kind: ClusterTask
+      name: buildah
+    runAfter:
+      - tests
+    params:
+      - name: IMAGE
+        value: "quay.io/$(params.repository_name):$(params.tag_name)"
+    workspaces:
+      - name: source
+        workspace: pipeline-shared-data
+  - name: deploy
+    runAfter:
+      - build-and-push
+    params:
+      - name: release_name
+        value: "$(params.application_name)"
+      - name: release_namespace
+        value: dev
+      - name: image
+        value: "quay.io/$(params.repository_name)"
+      - name: tag
+        value: "$(params.tag_name)"
+    taskRef:
+      kind: Task
+      name: deploy
+    workspaces:
+      - name: source
+        workspace: pipeline-shared-data

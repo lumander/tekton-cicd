@@ -1,0 +1,65 @@
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: branch-push
+  namespace: cicd
+spec:
+  params:
+  - name: repository_url
+    description: url of the repository ( e.g. https://github.com/owner/application )
+  - name: repository_name
+    description: full name of the repository ( e.g. owner/application )
+  - name: application_name
+    description: name of the repository ( e.g. application )
+  - name: branch_name
+    description: name of git branch
+  - name: tag_name
+    description: tag to be released on image registry
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: $(tt.params.application_name)-branch-push- 
+      spec:
+        params:
+          - name: repository_url
+            value: $(tt.params.repository_url)
+          - name: repository_name
+            value: $(tt.params.repository_name)
+          - name: application_name
+            value: $(tt.params.application_name)
+          - name: branch_name
+            value: $(tt.params.branch_name)
+          - name: tag_name
+            value: $(tt.params.tag_name)
+        serviceAccountName: tekton-cicd
+        pipelineRef:
+          name: branch-push # build, push with tag and deploy to staging and prod with canary ( different repo for code and config )
+        workspaces:
+          - name: pipeline-shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: branch-push
+  namespace: cicd
+spec:
+  params:
+    - name: application_name
+      value: $(body.repository.name)
+    - name: repository_name
+      value: $(body.repository.full_name)
+    - name: repository_url
+      value: $(body.repository.html_url)
+    - name: branch_name
+      value: $(body.branch_name)
+    - name: tag_name
+      value: $(body.tag_name)

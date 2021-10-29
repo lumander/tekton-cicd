@@ -1,0 +1,14 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: github-trigger
+  namespace: cicd
+spec:
+  targetPort: 8080
+  to:
+    kind: Service
+    name: el-github-trigger
+    weight: 100
+  tls:
+    termination: edge
