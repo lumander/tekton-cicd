@@ -69,6 +69,8 @@ spec:
         value: dev
       - name: image
         value: "quay.io/$(params.repository_name)"
+      - name: branch_name
+        value: "$(params.branch_name)"
       - name: tag
         value: "$(params.tag_name)"
     taskRef:

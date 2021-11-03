@@ -14,6 +14,9 @@ spec:
     - name: application_name
       type: string
       description: name of the repository ( e.g. application )
+    - name: branch_name
+      type: string
+      description: branch to be cloned
   workspaces:
   - name: pipeline-shared-data
   tasks:
@@ -49,6 +52,8 @@ spec:
         value: dev
       - name: image
         value: "quay.io/$(params.repository_name)"
+      - name: branch_name
+        value: "$(params.branch_name)"
       - name: tag
         value: "$(tasks.clone-repository.results.commit)"
     taskRef:

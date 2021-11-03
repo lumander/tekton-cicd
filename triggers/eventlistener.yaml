@@ -17,12 +17,7 @@ spec:
             eventTypes:
             - push
         - cel:
-            filter: 'body.ref.matches("refs/heads/(feature|hotfix|patch|bugfix)/[a-z\\-0-9A-Z]{1,20}")'
-        - cel:
-            filter: "body.created == false"
-        - cel:
-            filter: "body.deleted == false"
-        - cel:
+            filter: 'body.ref.matches("refs/heads/(feature|hotfix|patch|bugfix)/[a-z\\-0-9A-Z]{1,20}") && body.deleted == false'
             overlays:
             - key: branch_name
               expression: "body.ref.split('refs/heads/')[1]"
@@ -39,6 +34,9 @@ spec:
             - push
         - cel:
             filter: "body.ref.contains('refs/heads/main')"
+            overlays:
+            - key: branch_name
+              expression: "body.ref.split('refs/heads/')[1]"
     - name: tag-released
       bindings:
         - ref: tag-released
@@ -50,7 +48,8 @@ spec:
             - push
         - cel:
             filter: "body.ref.contains('refs/tags/')"
-        - cel:
             overlays:
+            - key: branch_name
+              expression: "body.ref.split('/')[1]"
             - key: tag_name
               expression: "body.ref.split('/')[2]"

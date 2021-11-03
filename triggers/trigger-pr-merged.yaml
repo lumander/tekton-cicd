@@ -12,6 +12,8 @@ spec:
     description: full name of the repository ( e.g. owner/application )
   - name: application_name
     description: name of the repository ( e.g. application )
+  - name: branch_name
+    description: name of git branch
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
@@ -25,6 +27,8 @@ spec:
             value: $(tt.params.repository_name)
           - name: application_name
             value: $(tt.params.application_name)
+          - name: branch_name
+            value: $(tt.params.branch_name)
         serviceAccountName: tekton-cicd
         pipelineRef:
           name: pr-merged # build and push and deploy to dev ( with dev/branch tag?, with a different repo I could choose the dpeloyment strategy without affecting the commits)
@@ -51,4 +55,6 @@ spec:
       value: $(body.repository.full_name)
     - name: repository_url
       value: $(body.repository.html_url)
+    - name: branch_name
+      value: $(body.branch_name)
 

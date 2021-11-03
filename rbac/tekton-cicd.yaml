@@ -23,6 +23,7 @@ rules:
       - patch
       - watch
       - delete
+      - update
   - apiGroups:
       - route.openshift.io
     resources:
@@ -32,6 +33,7 @@ rules:
       - create
       - patch
       - delete
+      - update
   - apiGroups:
       - ""
     resources:
@@ -52,6 +54,7 @@ rules:
       - patch
       - create
       - delete
+      - update
   - apiGroups:
       - "networking.istio.io"
     resources:
@@ -61,6 +64,7 @@ rules:
       - patch
       - list
       - create
+      - update
       - delete
   - apiGroups:
       - "networking.istio.io"
@@ -72,6 +76,18 @@ rules:
       - list
       - create
       - delete
+      - update
+  - apiGroups:
+      - "networking.istio.io"
+    resources:
+      - desstinationrules
+    verbs:
+      - get
+      - patch
+      - list
+      - create
+      - delete
+      - update
   - apiGroups:
       - "networking.istio.io"
     resources:
@@ -82,6 +98,7 @@ rules:
       - list
       - create
       - delete
+      - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
