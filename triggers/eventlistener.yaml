@@ -47,7 +47,7 @@ spec:
             eventTypes:
             - push
         - cel:
-            filter: "body.ref.contains('refs/tags/')"
+            filter: "body.ref.contains('refs/tags/') && body.deleted == false"
             overlays:
             - key: branch_name
               expression: "body.ref.split('/')[1]"

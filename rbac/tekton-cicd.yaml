@@ -80,7 +80,7 @@ rules:
   - apiGroups:
       - "networking.istio.io"
     resources:
-      - desstinationrules
+      - destinationrules
     verbs:
       - get
       - patch
