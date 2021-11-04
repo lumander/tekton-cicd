@@ -1,0 +1,101 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    tekton.dev/pipelines.minVersion: 0.12.1
+  name: deploy
+  namespace: cicd
+spec:
+  description: >-
+    These tasks will install / upgrade a helm chart into your Kubernetes /
+    OpenShift Cluster using Helm
+  params:
+    - name: release_name
+      default: helm-release
+      description: The helm release name
+      type: string
+    - name: chart_name
+      default: codemotion-chart
+      description: The helm chart name
+      type: string
+    - name: release_namespace
+      default: ''
+      description: The helm release namespace
+      type: string
+    - name: branch_name
+      default: ''
+      type: string
+    - name: overwrite_values
+      default: ''
+      description: >-
+        Specify the values you want to overwrite, comma separated:
+        autoscaling.enabled=true,replicas=1
+      type: string
+    - name: image
+      default: ''
+      type: string
+    - name: tag
+      default: 'latest'
+      type: string
+    - name: helm_version
+      default: latest
+      description: Specify a specific helm version
+      type: string
+    - name: contenttype
+      default: latest
+      description: Specify a specific helm version
+      type: string
+  steps:
+    - image: 'lachlanevenson/k8s-helm:$(params.helm_version)'
+      name: upgrade
+      resources: {}
+      script: |
+        #!/bin/sh
+        # params
+        NAMESPACE="$(params.release_namespace)"
+        RELEASE_NAME="$(params.release_name)"
+        BRANCH_NAME="$(params.branch_name)"
+        CHART_NAME="$(params.chart_name)"
+        IMAGE="$(params.image)"
+        TAG="$(params.tag)"
+        cd ./openshift
+        
+        if [ $BRANCH_NAME == "main" ] # only in dev, rolling from main and purges old releases
+          then
+            echo "Rolling out new release in $NAMESPACE"
+            helm upgrade --install $RELEASE_NAME $CHART_NAME -n dev --set "deployment.deploymentType=rolling,deployment.branch=$TAG,image.repository=$IMAGE,image.tag=$TAG"
+            HEADER_RELEASE=$(helm ls -n dev --filter $RELEASE_NAME'-' | awk '{print$1}' | tail -n +2)
+            if [ ! -z "$HEADER_RELEASE" ]
+              then
+                echo "Purging old releases in $NAMESPACE"
+                for i in $(helm ls -n dev --filter $RELEASE_NAME'-' | awk '{print$1}' | tail -n +2); do helm uninstall $i -n dev; done            
+            fi
+        elif [ $BRANCH_NAME == "tags" ] # only in staging or prod
+          then
+            DEPLOYMENT_TYPE=$(grep deploymentType cicd/$NAMESPACE.properties | cut -d = -f2)
+            if [ $NAMESPACE == "staging" ]
+              then
+                helm upgrade --install $RELEASE_NAME $CHART_NAME -n $NAMESPACE --set "deployment.deploymentType=$DEPLOYMENT_TYPE,deployment.branch=$TAG,image.repository=$IMAGE,image.tag=$TAG"
+            elif [ $NAMESPACE == "prod" ]
+              then
+                if [ $DEPLOYMENT_TYPE == "canary" ]
+                  then
+                    helm upgrade --install $RELEASE_NAME-canary $CHART_NAME -n $NAMESPACE --set "deployment.deploymentType=$DEPLOYMENT_TYPE,deployment.branch=$TAG,image.repository=$IMAGE,image.tag=$TAG"
+                fi
+                if [ $DEPLOYMENT_TYPE == "rolling" ]
+                  then
+                    helm upgrade --install $RELEASE_NAME $CHART_NAME -n $NAMESPACE --set "deployment.deploymentType=$DEPLOYMENT_TYPE,deployment.branch=$TAG,image.repository=$IMAGE,image.tag=$TAG"
+                    CANARY_RELEASE=$(helm ls -n prod --filter $RELEASE_NAME'-canary' | awk '{print$1}' | tail -n +2)
+                    if [ ! -z "$CANARY_RELEASE" ]
+                      then
+                        helm uninstall $CANARY_RELEASE -n prod
+                    fi
+                fi
+            fi
+        else # only in dev, from branches
+          echo "Rolling out headerBased release in dev from branch $BRANCH_NAME"
+          helm upgrade --install $RELEASE_NAME-$TAG $CHART_NAME -n dev --set "deployment.deploymentType=headerBased,deployment.branch=$TAG,image.repository=$IMAGE,image.tag=$TAG"
+        fi
+      workingDir: /workspace/source
+  workspaces:
+    - name: source
